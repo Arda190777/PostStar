@@ -1,0 +1,15 @@
+meta {
+  name: Delete Comment (Admin)
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/admin/comments/REPLACE_WITH_COMMENT_ID
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

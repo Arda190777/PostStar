@@ -1,0 +1,20 @@
+meta {
+  name: Delete Comment
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/posts/:postId/comments/:commentId
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+params:path {
+  postId: REPLACE_WITH_POST_ID
+  commentId: REPLACE_WITH_COMMENT_ID
+}

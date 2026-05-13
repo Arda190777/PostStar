@@ -1,0 +1,15 @@
+meta {
+  name: Get Comments For Post
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/posts/:postId/comments
+  body: none
+  auth: none
+}
+
+params:path {
+  postId: REPLACE_WITH_POST_ID
+}

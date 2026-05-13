@@ -1,0 +1,27 @@
+meta {
+  name: Edit Comment
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/posts/:postId/comments/:commentId
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+params:path {
+  postId: REPLACE_WITH_POST_ID
+  commentId: REPLACE_WITH_COMMENT_ID
+}
+
+body:json {
+  {
+    "content": "Updated comment content."
+  }
+}

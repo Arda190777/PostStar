@@ -1,0 +1,112 @@
+[33mcommit e5bdf87894b1172a8507991de10198a5c25a8375[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Fri Apr 17 21:40:12 2026 -0400
+
+    final touch ups and clean up for the entire project
+
+[33mcommit 2908d67f1ed3a1e94480a8743d11e17703958348[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Fri Apr 17 21:05:24 2026 -0400
+
+    Added Unit testing using jest in a seperate file called jest_tests and covered more than 60% of the code
+
+[33mcommit 0368232fa6f23430948f332dc8b8d552c1317ccc[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Fri Apr 17 20:17:13 2026 -0400
+
+    Deleted ports/usecases and fixed ports/repositories
+
+[33mcommit d4d7bff1bc67ab4961003221596fe3245b050f3c[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Fri Apr 17 20:11:42 2026 -0400
+
+    added soft delete for deleted users and a user status enum to check account type before accessing it.
+
+[33mcommit 162986a23c44410963206800fd2f8435f5ad09e4[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Fri Apr 17 20:00:54 2026 -0400
+
+    validation for domain controllers folders
+
+[33mcommit 1d4362c01317597883954a2c4fb410140e5bc8c2[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Fri Apr 17 19:48:47 2026 -0400
+
+    Added admin username and password and controller part for it
+
+[33mcommit 1287b2a6bbb065b9dea5559ed77608a4878ca6d7[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Sun Apr 12 04:01:22 2026 -0400
+
+    Added MongoDB, route files, ports layer and cleanup
+
+[33mcommit 6320b8f41a77043155ce8900beeee85ea0750e84[m[33m ([m[1;31morigin/middleware[m[33m)[m
+Author: Arda <Aecetintav7555@conestogac.on.ca>
+Date:   Fri Apr 10 14:32:09 2026 -0400
+
+    Added middleware functionality and fixed bruno folder along with controllers folder repairs
+
+[33mcommit 17c8ec3944e0ce357d61a70ab0679d9e20d52f76[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Mon Apr 6 03:00:46 2026 -0400
+
+    Added missing files from ports and bruno folders
+
+[33mcommit a5f2256bfa9ef883655c0211229592eaa888e266[m
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Mon Apr 6 02:59:54 2026 -0400
+
+    Added missing files from ports and bruno folders
+
+[33mcommit 49d6883b40b433986186935ec63f88cf8abb304b[m
+Merge: c934f80 cd8df8b
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Mon Apr 6 02:24:22 2026 -0400
+
+    Merge remote-tracking branch 'origin/infrastructure'
+
+[33mcommit c934f8030ceb8d3b62d543029961475e7a97e621[m
+Merge: 5a99d99 c679684
+Author: Amjad Albanna <aalbanna7200@conestogac.on.ca>
+Date:   Mon Apr 6 02:18:35 2026 -0400
+
+    -tracking branch 'origin/controllers'
+    Merged controllers with main branch
+    
+    Merged controllerwith main branch
+
+[33mcommit cd8df8bcf73389dba4fd3c5211c7092640613f6b[m[33m ([m[1;31morigin/infrastructure[m[33m)[m
+Author: Arda <Aecetintav7555@conestogac.on.ca>
+Date:   Thu Mar 26 14:21:59 2026 -0400
+
+    add infrastructure layer and repositories
+
+[33mcommit 5a99d99d5d2914b6a1499fd63a82985abe1a3237[m
+Author: amjad <aalbanna7200@conestogac.on.ca>
+Date:   Tue Mar 24 16:35:38 2026 -0400
+
+    Add .gitkeep to preserve empty folders
+
+[33mcommit c679684c60ddfdd5cc016db411764c06dfad3040[m[33m ([m[1;31morigin/controllers[m[33m)[m
+Author: pujan89 <patelpujan409@gmail.com>
+Date:   Tue Mar 24 14:32:52 2026 -0400
+
+    Controllers Created
+
+[33mcommit c9f377c00d5b61e58f1461d0c0fbfd740ef3af43[m
+Author: amjad <aalbanna7200@conestogac.on.ca>
+Date:   Fri Mar 13 12:28:56 2026 -0400
+
+    Implemented the domain files
+
+[33mcommit 2bf8c3c9ca6d0c552ecb1689ca6551967856569e[m
+Author: amjad <aalbanna7200@conestogac.on.ca>
+Date:   Fri Mar 13 12:15:36 2026 -0400
+
+    Default Application Created
+
+[33mcommit 18fac483bb40e4aa589e8c8fd311e20fc76e459c[m
+Author: amjad <aalbanna7200@conestogac.on.ca>
+Date:   Fri Mar 13 12:13:35 2026 -0400
+
+    first commit

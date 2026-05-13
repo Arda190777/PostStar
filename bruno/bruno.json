@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "clean-arch-ts Forum API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

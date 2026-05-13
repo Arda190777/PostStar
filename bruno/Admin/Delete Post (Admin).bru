@@ -1,0 +1,15 @@
+meta {
+  name: Delete Post (Admin)
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/admin/posts/REPLACE_WITH_POST_ID
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
