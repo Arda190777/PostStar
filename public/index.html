@@ -179,7 +179,7 @@
       <div class="create-post-form">
         <h3>New Post</h3>
         <div class="form-row"><input type="text" id="post-title-input" placeholder="Title" /></div>
-        <div class="form-row"><textarea id="post-body-input" placeholder="What's on your mind?"></textarea></div>
+        <div class="form-row"><textarea id="post-content-input" placeholder="What's on your mind?"></textarea></div>
         <button class="btn-primary" onclick="createPost()">Publish</button>
       </div>
     </div>
@@ -334,7 +334,7 @@
       <div class="card" id="post-${p._id}">
         <div class="post-title">${esc(p.title)}</div>
         <div class="post-meta">${esc(p.author?.username || 'Unknown')} &middot; ${timeAgo(p.createdAt)}</div>
-        <div class="post-body">${esc(p.body)}</div>
+        <div class="post-body">${esc(p.content)}</div>
         <div class="post-actions">
           ${likeBtn}
           <span class="like-count">&#10084;&#65039; ${p.likeCount ?? 0}</span>
@@ -348,13 +348,13 @@
   }
 
   async function createPost() {
-    const title = document.getElementById('post-title-input').value.trim();
-    const body  = document.getElementById('post-body-input').value.trim();
-    if (!title || !body) { toast('Title and content are required.'); return; }
+    const title   = document.getElementById('post-title-input').value.trim();
+    const content = document.getElementById('post-content-input').value.trim();
+    if (!title || !content) { toast('Title and content are required.'); return; }
     try {
-      await api('POST', '/posts', { title, body });
+      await api('POST', '/posts', { title, content });
       document.getElementById('post-title-input').value = '';
-      document.getElementById('post-body-input').value = '';
+      document.getElementById('post-content-input').value = '';
       toast('Post published!'); loadPosts();
     } catch (e) { toast(e.message); }
   }
@@ -369,9 +369,9 @@
     const card = document.getElementById('post-' + id);
     const newTitle = prompt('New title:', card.querySelector('.post-title').textContent);
     if (newTitle === null) return;
-    const newBody = prompt('New content:', card.querySelector('.post-body').textContent);
-    if (newBody === null) return;
-    api('PUT', '/posts/' + id, { title: newTitle, body: newBody })
+    const newContent = prompt('New content:', card.querySelector('.post-body').textContent);
+    if (newContent === null) return;
+    api('PUT', '/posts/' + id, { title: newTitle, content: newContent })
       .then(() => { toast('Post updated.'); loadPosts(); })
       .catch(e => toast(e.message));
   }
@@ -414,7 +414,7 @@
     const input = document.getElementById('ci-' + postId);
     const text = input.value.trim();
     if (!text) return;
-    try { await api('POST', '/posts/' + postId + '/comments', { text }); input.value = ''; loadComments(postId); }
+    try { await api('POST', '/posts/' + postId + '/comments', { content: text }); input.value = ''; loadComments(postId); }
     catch (e) { toast(e.message); }
   }
 
