@@ -1,5 +1,5 @@
 {
-  "name": "clean-arch-ts",
+  "name": "poststar",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
@@ -15,7 +15,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "A full-featured forum REST API built with Node.js, Express, TypeScript, and MongoDB following Clean Architecture principles.",
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
