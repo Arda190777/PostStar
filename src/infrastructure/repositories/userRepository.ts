@@ -43,6 +43,22 @@ export const findUserByUsernameAndPassword = async (
   return user
 }
 
+/**
+ * Look up several users at once by id, returning only their public fields.
+ *
+ * Posts and comments store just an authorId, so this is how a list of them gets
+ * turned into something showing real usernames — one query for the whole page
+ * instead of one per row.
+ */
+export const findUsersByIds = async (
+  ids: string[]
+): Promise<Array<Pick<User, "id" | "username">>> => {
+  if (ids.length === 0) return []
+
+  const docs = await UserModel.find({ id: { $in: ids } }).select("-_id id username").lean()
+  return docs as unknown as Array<Pick<User, "id" | "username">>
+}
+
 /** Find a user by username (used for duplicate check during registration) */
 export const findUserByUsername = async (
   username: string

@@ -3,8 +3,10 @@ import type { Request, Response } from "express";
 import {
   getStats,
   adminDeletePost,
+  adminDeleteComment,
   setUserStatus,
 } from "../../controllers/admin.js";
+import type { Comment } from "../../domain/comment.js";
 
 jest.mock("../../infrastructure/repositories/adminRepository.js", () => ({
   getSiteStats: jest.fn(),
@@ -17,7 +19,10 @@ jest.mock("../../infrastructure/repositories/postRepository.js", () => ({
 }));
 
 jest.mock("../../infrastructure/repositories/commentRepository.js", () => ({
+  findCommentById: jest.fn(),
+  getCommentsByPostId: jest.fn(),
   removeCommentById: jest.fn(),
+  removeCommentsByIds: jest.fn(),
 }));
 
 jest.mock("../../infrastructure/repositories/userRepository.js", () => ({
@@ -28,6 +33,7 @@ jest.mock("../../infrastructure/repositories/userRepository.js", () => ({
 import * as adminRepo from "../../infrastructure/repositories/adminRepository.js";
 import * as postRepo from "../../infrastructure/repositories/postRepository.js";
 import * as userRepo from "../../infrastructure/repositories/userRepository.js";
+import * as commentRepo from "../../infrastructure/repositories/commentRepository.js";
 
 const mockRes = () => {
   const res = {} as Response;
@@ -90,6 +96,58 @@ describe("adminDeletePost", () => {
       res,
     );
     expect(res.json).toHaveBeenCalledWith({ message: "Post deleted by admin" });
+  });
+});
+
+describe("adminDeleteComment", () => {
+  /** Builds a comment fixture; parentId defaults to null (a top-level comment) */
+  const makeComment = (id: string, parentId: string | null = null): Comment => ({
+    id,
+    postId: "post-1",
+    authorId: "user-1",
+    content: `content of ${id}`,
+    parentId,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  it("returns 404 when the comment does not exist", async () => {
+    jest.mocked(commentRepo.findCommentById).mockResolvedValue(undefined);
+    const res = mockRes();
+    await adminDeleteComment(
+      { params: { id: "comment-1" }, user: admin } as unknown as Request,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(commentRepo.removeCommentsByIds).not.toHaveBeenCalled();
+  });
+
+  it("deletes the comment along with its replies", async () => {
+    jest
+      .mocked(commentRepo.findCommentById)
+      .mockResolvedValue(makeComment("comment-1"));
+    jest
+      .mocked(commentRepo.getCommentsByPostId)
+      .mockResolvedValue([
+        makeComment("comment-1"),
+        makeComment("reply-1", "comment-1"),
+        makeComment("unrelated"),
+      ]);
+    jest.mocked(commentRepo.removeCommentsByIds).mockResolvedValue(undefined);
+
+    const res = mockRes();
+    await adminDeleteComment(
+      { params: { id: "comment-1" }, user: admin } as unknown as Request,
+      res,
+    );
+
+    const removed = jest.mocked(commentRepo.removeCommentsByIds).mock
+      .calls[0]?.[0] as string[];
+    expect(removed.sort()).toEqual(["comment-1", "reply-1"]);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Comment deleted by admin",
+      deletedCount: 2,
+    });
   });
 });
 

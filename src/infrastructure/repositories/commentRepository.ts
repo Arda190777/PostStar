@@ -30,7 +30,22 @@ export const updateComment = async (
   return doc ? (doc as unknown as Comment) : undefined
 }
 
+/** Find a single comment by id, or undefined if not found */
+export const findCommentById = async (id: string): Promise<Comment | undefined> => {
+  const doc = await CommentModel.findOne({ id }).select("-_id").lean()
+  return doc ? (doc as unknown as Comment) : undefined
+}
+
 /** Remove a comment by id (no-op if not found) */
 export const removeCommentById = async (id: string): Promise<void> => {
   await CommentModel.deleteOne({ id })
+}
+
+/**
+ * Remove several comments at once (no-op for ids that don't exist).
+ * Used to delete a comment together with all of its replies in one operation.
+ */
+export const removeCommentsByIds = async (ids: string[]): Promise<void> => {
+  if (ids.length === 0) return
+  await CommentModel.deleteMany({ id: { $in: ids } })
 }

@@ -16,6 +16,9 @@ export interface IUserRepository {
   /** Find a user by username (used for duplicate check during registration) */
   findUserByUsername(username: string): Promise<User | undefined>
 
+  /** Look up several users at once by id, returning only their public fields */
+  findUsersByIds(ids: string[]): Promise<Array<Pick<User, "id" | "username">>>
+
   /** Find a user by their id */
   findUserById(id: string): Promise<User | undefined>
 

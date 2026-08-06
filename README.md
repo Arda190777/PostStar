@@ -12,7 +12,7 @@ PostStar lets users register, create posts, leave comments, and like content —
 
 - 🔐 **Authentication** — Register and login with JWT-based token auth, expiring tokens, and scrypt-hashed passwords
 - 📝 **Posts** — Create, read, update, and delete forum posts
-- 💬 **Comments** — Threaded comments on each post
+- 💬 **Comments** — Threaded comments: reply to any comment, nested up to 5 levels
 - ❤️ **Likes** — Like posts (once per user)
 - 🛡️ **Admin Panel** — Stats overview, user management, and content moderation
 - 🌐 **Simple UI** — Browser-accessible frontend served at `/`
@@ -113,21 +113,67 @@ npm test
 
 ### 📝 Posts
 
-| Method | Endpoint       | Description     | Auth |
-| ------ | -------------- | --------------- | ---- |
-| GET    | `/posts`       | List all posts  | ❌   |
+| Method | Endpoint       | Description                 | Auth |
+| ------ | -------------- | --------------------------- | ---- |
+| GET    | `/posts`       | List all posts, newest first | ❌   |
 | POST   | `/posts`       | Create a post   | ✅   |
 | PUT    | `/posts/:id`   | Edit a post     | ✅   |
-| DELETE | `/posts/:id`   | Delete a post   | ✅   |
+| DELETE | `/posts/:id`   | Delete a post               | ✅   |
+
+Posts and comments are returned with an `author` object (`{ id, username }`)
+alongside the raw `authorId`, so clients don't need a second request to show who
+wrote something.
 
 ### 💬 Comments
 
-| Method | Endpoint                                  | Description           | Auth |
-| ------ | ----------------------------------------- | --------------------- | ---- |
-| GET    | `/posts/:postId/comments`                 | Get comments on a post| ❌   |
-| POST   | `/posts/:postId/comments`                 | Add a comment         | ✅   |
-| PUT    | `/posts/:postId/comments/:commentId`      | Edit a comment        | ✅   |
-| DELETE | `/posts/:postId/comments/:commentId`      | Delete a comment      | ✅   |
+| Method | Endpoint                                  | Description                      | Auth |
+| ------ | ----------------------------------------- | -------------------------------- | ---- |
+| GET    | `/posts/:postId/comments`                 | Get comment threads on a post    | ❌   |
+| POST   | `/posts/:postId/comments`                 | Add a comment, or reply to one   | ✅   |
+| PUT    | `/posts/:postId/comments/:commentId`      | Edit a comment                   | ✅   |
+| DELETE | `/posts/:postId/comments/:commentId`      | Delete a comment and its replies | ✅   |
+
+#### Threading
+
+Comments are threaded. To reply to another comment, include its id as `parentId`
+when posting:
+
+```json
+{ "content": "I agree with this!", "parentId": "1745012345678" }
+```
+
+Leave `parentId` out for a top-level comment. The parent must belong to the same
+post — replying across posts returns `404`.
+
+`GET /posts/:postId/comments` returns only the top-level comments, each with its
+answers nested in a `replies` array:
+
+```json
+[
+  {
+    "id": "1745012345678",
+    "content": "Great post!",
+    "parentId": null,
+    "author": { "id": "1745000000000", "username": "alice" },
+    "replies": [
+      {
+        "id": "1745012399999",
+        "content": "I agree with this!",
+        "parentId": "1745012345678",
+        "author": { "id": "1745000011111", "username": "bob" },
+        "replies": []
+      }
+    ]
+  }
+]
+```
+
+Threads nest up to **5 levels**. A reply deeper than that is still accepted, but
+it attaches to the deepest allowed ancestor rather than nesting further.
+
+Deleting a comment also deletes every reply beneath it, so a thread can never be
+left pointing at a parent that is gone. The response reports how many were
+removed via `deletedCount`.
 
 ### ❤️ Likes
 
