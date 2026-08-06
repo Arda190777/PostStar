@@ -87,6 +87,16 @@
     .comments-section.open { display: block; }
     .comment-item { font-size: 0.85rem; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
     .comment-item:last-child { border-bottom: none; }
+
+    /* Replies are indented one step and marked with a line, so the thread
+       structure is visible at a glance. Nesting repeats for deeper replies. */
+    .comment-replies {
+      margin: 4px 0 0 16px;
+      padding-left: 12px;
+      border-left: 2px solid #eee;
+    }
+    .comment-replies .comment-item:last-child { border-bottom: none; }
+    .reply-slot:empty { display: none; }
     .comment-author { font-weight: 600; margin-right: 6px; color: #333; }
     .comment-text { color: #555; }
     .comment-form { display: flex; gap: 8px; margin-top: 10px; }
@@ -256,8 +266,7 @@
     document.getElementById('btn-logout').style.display = in_ ? '' : 'none';
     document.getElementById('nav-user').textContent = in_ ? (currentUser?.username || '') : '';
     document.getElementById('create-post-area').style.display = in_ ? '' : 'none';
-    const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superuser';
-    document.getElementById('tab-admin').style.display = isAdmin ? '' : 'none';
+    document.getElementById('tab-admin').style.display = isAdmin() ? '' : 'none';
   }
 
   function openAuth() { document.getElementById('auth-overlay').classList.add('open'); }
@@ -325,26 +334,31 @@
   }
 
   function renderPost(p) {
-    const isOwner = currentUser && currentUser.id === p.author?._id;
-    const ownerBtns = isOwner ? `
-      <button class="btn-secondary btn-sm" onclick="editPost('${p._id}',this)">Edit</button>
-      <button class="btn-danger btn-sm" onclick="deletePost('${p._id}')">Delete</button>` : '';
-    const likeBtn = token ? `<button class="btn-secondary btn-sm" onclick="likePost('${p._id}')">&#128077; Like</button>` : '';
+    // Admins can moderate anything; everyone else only their own posts
+    const canManage = currentUser && (currentUser.id === p.authorId || isAdmin());
+    const ownerBtns = canManage ? `
+      <button class="btn-secondary btn-sm" onclick="editPost('${p.id}',this)">Edit</button>
+      <button class="btn-danger btn-sm" onclick="deletePost('${p.id}')">Delete</button>` : '';
+    const likeBtn = token ? `<button class="btn-secondary btn-sm" onclick="likePost('${p.id}')">&#128077; Like</button>` : '';
     return `
-      <div class="card" id="post-${p._id}">
+      <div class="card" id="post-${p.id}">
         <div class="post-title">${esc(p.title)}</div>
         <div class="post-meta">${esc(p.author?.username || 'Unknown')} &middot; ${timeAgo(p.createdAt)}</div>
         <div class="post-body">${esc(p.content)}</div>
         <div class="post-actions">
           ${likeBtn}
-          <span class="like-count">&#10084;&#65039; ${p.likeCount ?? 0}</span>
+          <span class="like-count">&#10084;&#65039; ${p.likes ?? 0}</span>
           ${ownerBtns}
-          <button class="comments-toggle" onclick="toggleComments('${p._id}',this)">Comments &#9660;</button>
+          <button class="comments-toggle" onclick="toggleComments('${p.id}',this)">Comments &#9660;</button>
         </div>
-        <div class="comments-section" id="comments-${p._id}">
+        <div class="comments-section" id="comments-${p.id}">
           <div class="loading">Loading...</div>
         </div>
       </div>`;
+  }
+
+  function isAdmin() {
+    return currentUser?.role === 'admin' || currentUser?.role === 'superuser';
   }
 
   async function createPost() {
@@ -387,38 +401,81 @@
     const section = document.getElementById('comments-' + postId);
     section.innerHTML = '<div class="loading">Loading...</div>';
     try {
+      // The API returns top-level comments, each with its replies nested inside
       const comments = await api('GET', '/posts/' + postId + '/comments');
-      const addForm = token ? `
-        <div class="comment-form">
-          <input type="text" id="ci-${postId}" placeholder="Write a comment..." />
-          <button class="btn-primary btn-sm" onclick="addComment('${postId}')">Send</button>
-        </div>` : '';
+      const addForm = commentForm(postId);
+
       if (!comments.length) {
         section.innerHTML = '<div class="empty" style="padding:10px 0;font-size:.85rem">No comments yet.</div>' + addForm;
         return;
       }
-      const items = comments.map(c => {
-        const isOwner = currentUser && currentUser.id === c.author?._id;
-        const del = isOwner
-          ? `<button class="btn-danger btn-sm" style="margin-left:8px" onclick="deleteComment('${postId}','${c._id}')">Delete</button>` : '';
-        return `<div class="comment-item">
-          <span class="comment-author">${esc(c.author?.username || '?')}</span>
-          <span class="comment-text">${esc(c.text)}</span>${del}
-        </div>`;
-      }).join('');
-      section.innerHTML = items + addForm;
+      section.innerHTML = renderComments(comments, postId) + addForm;
     } catch { section.innerHTML = '<div class="empty">Could not load comments.</div>'; }
   }
 
-  async function addComment(postId) {
-    const input = document.getElementById('ci-' + postId);
+  /** Renders a list of comments, recursing into each one's replies */
+  function renderComments(comments, postId) {
+    return comments.map(c => {
+      const canManage = currentUser && (currentUser.id === c.authorId || isAdmin());
+      const del = canManage
+        ? `<button class="btn-danger btn-sm" style="margin-left:8px" onclick="deleteComment('${postId}','${c.id}')">Delete</button>` : '';
+      const reply = token
+        ? `<button class="btn-secondary btn-sm" style="margin-left:8px" onclick="showReplyForm('${postId}','${c.id}',this)">Reply</button>` : '';
+
+      // Replies sit in a nested block, which the CSS indents one step further
+      const replies = c.replies?.length
+        ? `<div class="comment-replies">${renderComments(c.replies, postId)}</div>` : '';
+
+      return `<div class="comment-item">
+        <div>
+          <span class="comment-author">${esc(c.author?.username || '?')}</span>
+          <span class="comment-text">${esc(c.content)}</span>${reply}${del}
+        </div>
+        <div class="reply-slot" id="reply-slot-${c.id}"></div>
+        ${replies}
+      </div>`;
+    }).join('');
+  }
+
+  /** The "write a comment" box. With a parentId it becomes a reply box instead. */
+  function commentForm(postId, parentId) {
+    if (!token) return '';
+    const inputId = parentId ? `ci-${postId}-${parentId}` : `ci-${postId}`;
+    const placeholder = parentId ? 'Write a reply...' : 'Write a comment...';
+    const parentArg = parentId ? `'${parentId}'` : 'null';
+    return `
+      <div class="comment-form">
+        <input type="text" id="${inputId}" placeholder="${placeholder}" />
+        <button class="btn-primary btn-sm" onclick="addComment('${postId}',${parentArg})">Send</button>
+      </div>`;
+  }
+
+  /** Opens a reply box under one comment, closing any other that was open */
+  function showReplyForm(postId, commentId, btn) {
+    const slot = document.getElementById('reply-slot-' + commentId);
+    const alreadyOpen = slot.innerHTML !== '';
+
+    document.querySelectorAll('.reply-slot').forEach(s => { s.innerHTML = ''; });
+    if (alreadyOpen) { btn.textContent = 'Reply'; return; }
+
+    slot.innerHTML = commentForm(postId, commentId);
+    btn.textContent = 'Cancel';
+    document.getElementById(`ci-${postId}-${commentId}`)?.focus();
+  }
+
+  async function addComment(postId, parentId) {
+    const input = document.getElementById(parentId ? `ci-${postId}-${parentId}` : 'ci-' + postId);
     const text = input.value.trim();
     if (!text) return;
-    try { await api('POST', '/posts/' + postId + '/comments', { content: text }); input.value = ''; loadComments(postId); }
+
+    // parentId is only sent when this is a reply — a plain comment omits it
+    const body = parentId ? { content: text, parentId } : { content: text };
+    try { await api('POST', '/posts/' + postId + '/comments', body); input.value = ''; loadComments(postId); }
     catch (e) { toast(e.message); }
   }
 
   async function deleteComment(postId, commentId) {
+    if (!confirm('Delete this comment? Any replies to it will be removed too.')) return;
     try { await api('DELETE', '/posts/' + postId + '/comments/' + commentId); loadComments(postId); }
     catch (e) { toast(e.message); }
   }
@@ -445,8 +502,8 @@
         const status = u.status || 'active';
         const badge = `<span class="badge badge-${status}">${status}</span>`;
         const actionBtn = status === 'active'
-          ? `<button class="btn-danger btn-sm" onclick="setStatus('${u._id}','blocked')">Block</button>`
-          : `<button class="btn-secondary btn-sm" onclick="setStatus('${u._id}','active')">Activate</button>`;
+          ? `<button class="btn-danger btn-sm" onclick="setStatus('${u.id}','blocked')">Block</button>`
+          : `<button class="btn-secondary btn-sm" onclick="setStatus('${u.id}','active')">Activate</button>`;
         return `<div class="user-row">
           <div class="user-info">
             <div class="user-name">${esc(u.username)}</div>

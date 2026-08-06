@@ -1,0 +1,39 @@
+meta {
+  name: Reply To Comment
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/posts/:postId/comments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+params:path {
+  postId: REPLACE_WITH_POST_ID
+}
+
+body:json {
+  {
+    "content": "I agree with this!",
+    "parentId": "REPLACE_WITH_COMMENT_ID"
+  }
+}
+
+docs {
+  Replies to an existing comment by passing its id as `parentId`.
+
+  The parent must be a comment on the same post — replying to a comment from
+  another post returns 404.
+
+  Threads stop nesting at 5 levels: a reply below that still succeeds, but it
+  is attached to the deepest allowed ancestor instead of nesting further.
+
+  Leave `parentId` out entirely (see "Add Comment") to post a top-level comment.
+}

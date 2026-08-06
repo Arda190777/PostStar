@@ -3,6 +3,7 @@
 // Everything else goes through these functions, keeping database logic in one place.
 
 import type { User, UserStatus } from "../../domain/user.js"
+import { hashPassword, isHashed, verifyPassword } from "../../domain/password.js"
 import { UserModel } from "../models/UserModel.js"
 
 /** Persist a new user and return it */
@@ -14,13 +15,48 @@ export const addUser = async (user: User): Promise<User> => {
 /**
  * Find a user by username and password — but ONLY if their account is active.
  * Blocked and deleted users are treated as if they don't exist during login.
+ *
+ * Passwords are stored hashed, and the same password produces a different hash
+ * every time (each one gets its own random salt). That means we cannot ask
+ * MongoDB to match on the password directly — we look the user up by username
+ * and then verify the password in code.
  */
 export const findUserByUsernameAndPassword = async (
   username: string,
   password: string
 ): Promise<User | undefined> => {
-  const doc = await UserModel.findOne({ username, password, status: "active" }).select("-_id").lean()
-  return doc ? (doc as unknown as User) : undefined
+  const doc = await UserModel.findOne({ username, status: "active" }).select("-_id").lean()
+  if (!doc) return undefined
+
+  const user = doc as unknown as User
+  if (!verifyPassword(password, user.password)) return undefined
+
+  // Accounts created before hashing existed still hold a plain-text password.
+  // A correct login is the only moment we know the real password, so that is
+  // when we replace it with a hash. After one login the account is fully migrated.
+  if (!isHashed(user.password)) {
+    const upgraded = hashPassword(password)
+    await UserModel.updateOne({ id: user.id }, { password: upgraded })
+    user.password = upgraded
+  }
+
+  return user
+}
+
+/**
+ * Look up several users at once by id, returning only their public fields.
+ *
+ * Posts and comments store just an authorId, so this is how a list of them gets
+ * turned into something showing real usernames — one query for the whole page
+ * instead of one per row.
+ */
+export const findUsersByIds = async (
+  ids: string[]
+): Promise<Array<Pick<User, "id" | "username">>> => {
+  if (ids.length === 0) return []
+
+  const docs = await UserModel.find({ id: { $in: ids } }).select("-_id id username").lean()
+  return docs as unknown as Array<Pick<User, "id" | "username">>
 }
 
 /** Find a user by username (used for duplicate check during registration) */

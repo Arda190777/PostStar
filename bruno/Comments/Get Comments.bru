@@ -13,3 +13,10 @@ get {
 params:path {
   postId: REPLACE_WITH_POST_ID
 }
+
+docs {
+  Returns the post's top-level comments, each with its replies nested in a
+  `replies` array (and those replies carrying their own `replies`, and so on).
+
+  Every comment includes an `author` object with the writer's id and username.
+}

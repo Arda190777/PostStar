@@ -11,6 +11,7 @@ import {
   findPostById
 } from "../infrastructure/repositories/postRepository.js"
 import { createPost as buildPost } from "../domain/post.js"
+import { buildAuthorLookup, withAuthor } from "./authorInfo.js"
 
 /** POST /posts — create a new forum post */
 export const createPost = async (req: Request, res: Response): Promise<void> => {
@@ -24,13 +25,24 @@ export const createPost = async (req: Request, res: Response): Promise<void> => 
 
   // buildPost (domain factory) enforces that title and content are not just whitespace
   const post = buildPost(Date.now().toString(), title, content, req.user!.id)
+  const saved = await addPost(post)
 
-  res.status(201).json(await addPost(post))
+  // The author is whoever is logged in, so their name is already known here —
+  // no need to look it up again.
+  const author = { id: req.user!.id, username: req.user!.username }
+
+  res.status(201).json({ ...saved, author })
 }
 
-/** GET /posts — return all posts */
+/** GET /posts — return all posts, newest first, each with its author's name */
 export const getPosts = async (_req: Request, res: Response): Promise<void> => {
-  res.json(await getAllPosts())
+  const posts = await getAllPosts()
+  const authors = await buildAuthorLookup(posts)
+
+  // Newest first — createdAt is an ISO timestamp, so plain string ordering works
+  const newestFirst = [...posts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  res.json(newestFirst.map((post) => withAuthor(post, authors)))
 }
 
 /** DELETE /posts/:id — delete a post (owner, superuser, or admin only) */

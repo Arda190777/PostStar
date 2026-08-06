@@ -15,6 +15,10 @@ export interface UserAnalytic {
   id: string
   username: string
   role: string
+
+  /** active / blocked / deleted — lets the admin screen show who is suspended */
+  status: string
+
   postCount: number
   commentCount: number
   likeCount: number

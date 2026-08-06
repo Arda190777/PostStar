@@ -6,9 +6,14 @@
 import type { Request, Response } from "express"
 import { getSiteStats, getUserAnalytics } from "../infrastructure/repositories/adminRepository.js"
 import { removePostById, findPostById } from "../infrastructure/repositories/postRepository.js"
-import { removeCommentById } from "../infrastructure/repositories/commentRepository.js"
+import {
+  findCommentById,
+  getCommentsByPostId,
+  removeCommentsByIds
+} from "../infrastructure/repositories/commentRepository.js"
 import { findUserById, updateUserStatus } from "../infrastructure/repositories/userRepository.js"
 import { isValidStatus } from "../domain/user.js"
+import { collectThreadIds } from "../domain/comment.js"
 
 /** GET /admin/stats — site-wide statistics (admin and superuser only) */
 export const getStats = async (_req: Request, res: Response): Promise<void> => {
@@ -38,8 +43,20 @@ export const adminDeletePost = async (req: Request, res: Response): Promise<void
 /** DELETE /admin/comments/:id — admin can delete any comment regardless of who wrote it */
 export const adminDeleteComment = async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id as string
-  await removeCommentById(id)
-  res.json({ message: "Comment deleted by admin" })
+
+  const comment = await findCommentById(id)
+  if (!comment) {
+    res.status(404).json({ message: "Comment not found" })
+    return
+  }
+
+  // Take the replies with it, same as the normal delete route — otherwise
+  // moderating a comment would leave its answers dangling under nothing.
+  const siblings = await getCommentsByPostId(comment.postId)
+  const removed = collectThreadIds(id, siblings)
+  await removeCommentsByIds(removed)
+
+  res.json({ message: "Comment deleted by admin", deletedCount: removed.length })
 }
 
 /**
@@ -83,5 +100,16 @@ export const setUserStatus = async (req: Request, res: Response): Promise<void> 
   }
 
   const updated = await updateUserStatus(targetId, status)
-  res.json({ message: `User status updated to "${status}"`, user: updated })
+
+  // Return only the safe fields — the stored user also carries the password
+  // hash, and that must never leave the server, not even on an admin route.
+  res.json({
+    message: `User status updated to "${status}"`,
+    user: updated && {
+      id: updated.id,
+      username: updated.username,
+      role: updated.role,
+      status: updated.status
+    }
+  })
 }

@@ -10,7 +10,13 @@ jest.mock("../../infrastructure/repositories/postRepository.js", () => ({
   updatePost: jest.fn(),
 }));
 
+// Listing posts looks up author names, which reaches the user repository
+jest.mock("../../infrastructure/repositories/userRepository.js", () => ({
+  findUsersByIds: jest.fn(),
+}));
+
 import * as postRepo from "../../infrastructure/repositories/postRepository.js";
+import * as userRepo from "../../infrastructure/repositories/userRepository.js";
 
 const mockRes = () => {
   const res = {} as Response;
@@ -29,7 +35,12 @@ const post = {
   createdAt: "",
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.mocked(userRepo.findUsersByIds).mockResolvedValue([
+    { id: "user-1", username: "alice" },
+  ]);
+});
 
 describe("createPost", () => {
   it("returns 400 when fields are missing", async () => {
@@ -53,11 +64,40 @@ describe("createPost", () => {
 });
 
 describe("getPosts", () => {
-  it("returns all posts", async () => {
+  it("returns all posts, each carrying its author's name", async () => {
     jest.mocked(postRepo.getAllPosts).mockResolvedValue([post]);
     const res = mockRes();
     await getPosts({} as Request, res);
-    expect(res.json).toHaveBeenCalledWith([post]);
+    expect(res.json).toHaveBeenCalledWith([
+      { ...post, author: { id: "user-1", username: "alice" } },
+    ]);
+  });
+
+  it("returns the newest post first", async () => {
+    const older = { ...post, id: "old", createdAt: "2026-01-01T00:00:00.000Z" };
+    const newer = { ...post, id: "new", createdAt: "2026-06-01T00:00:00.000Z" };
+    jest.mocked(postRepo.getAllPosts).mockResolvedValue([older, newer]);
+
+    const res = mockRes();
+    await getPosts({} as Request, res);
+
+    const body = (res.json as jest.Mock).mock.calls[0]?.[0] as Array<{
+      id: string;
+    }>;
+    expect(body.map((p) => p.id)).toEqual(["new", "old"]);
+  });
+
+  it("falls back to a placeholder when the author no longer exists", async () => {
+    jest.mocked(userRepo.findUsersByIds).mockResolvedValue([]);
+    jest.mocked(postRepo.getAllPosts).mockResolvedValue([post]);
+
+    const res = mockRes();
+    await getPosts({} as Request, res);
+
+    const body = (res.json as jest.Mock).mock.calls[0]?.[0] as Array<{
+      author: { username: string };
+    }>;
+    expect(body[0]?.author.username).toBe("[unknown]");
   });
 });
 

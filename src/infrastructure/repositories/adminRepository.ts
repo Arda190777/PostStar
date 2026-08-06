@@ -18,13 +18,14 @@ export const getSiteStats = async (): Promise<SiteStats> => ({
 
 /** Return per-user activity: post, comment, and like counts for each user */
 export const getUserAnalytics = async (): Promise<UserAnalytic[]> => {
-  const users = await UserModel.find().select("-_id id username role").lean()
+  const users = await UserModel.find().select("-_id id username role status").lean()
 
   return Promise.all(
     users.map(async (user) => ({
       id:           user.id as string,
       username:     user.username,
       role:         user.role,
+      status:       user.status,
       postCount:    await PostModel.countDocuments({ authorId: user.id }),
       commentCount: await CommentModel.countDocuments({ authorId: user.id }),
       likeCount:    await LikeModel.countDocuments({ userId: user.id })

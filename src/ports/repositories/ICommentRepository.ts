@@ -12,9 +12,15 @@ export interface ICommentRepository {
   /** Return all comments for a given post */
   getCommentsByPostId(postId: string): Promise<Comment[]>
 
+  /** Find a single comment by id; returns undefined if not found */
+  findCommentById(id: string): Promise<Comment | undefined>
+
   /** Update a comment's content; returns undefined if not found */
   updateComment(id: string, content: string): Promise<Comment | undefined>
 
   /** Remove a comment by id (no-op if not found) */
   removeCommentById(id: string): Promise<void>
+
+  /** Remove several comments at once — used to delete a comment with its replies */
+  removeCommentsByIds(ids: string[]): Promise<void>
 }
