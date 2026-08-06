@@ -10,7 +10,7 @@ export interface IUserRepository {
   /** Persist a new user and return it */
   addUser(user: User): Promise<User>
 
-  /** Look up a user by exact username and password match — only returns active users */
+  /** Look up a user by username and verify the given password — only returns active users */
   findUserByUsernameAndPassword(username: string, password: string): Promise<User | undefined>
 
   /** Find a user by username (used for duplicate check during registration) */

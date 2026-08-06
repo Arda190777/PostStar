@@ -83,5 +83,16 @@ export const setUserStatus = async (req: Request, res: Response): Promise<void> 
   }
 
   const updated = await updateUserStatus(targetId, status)
-  res.json({ message: `User status updated to "${status}"`, user: updated })
+
+  // Return only the safe fields — the stored user also carries the password
+  // hash, and that must never leave the server, not even on an admin route.
+  res.json({
+    message: `User status updated to "${status}"`,
+    user: updated && {
+      id: updated.id,
+      username: updated.username,
+      role: updated.role,
+      status: updated.status
+    }
+  })
 }

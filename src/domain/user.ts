@@ -3,6 +3,8 @@
 // rules that must always be true (e.g. username can't be empty, password must
 // be at least 6 characters). If a User can't be created here, it can't exist anywhere.
 
+import { hashPassword } from "./password.js"
+
 export type Role = "user" | "admin" | "superuser"
 
 /**
@@ -19,7 +21,10 @@ export type UserStatus = "active" | "blocked" | "deleted"
 export interface User {
   id: string
   username: string
+
+  /** Always a hash produced by hashPassword — never the plain-text password */
   password: string
+
   role: Role
   status: UserStatus
 }
@@ -28,16 +33,20 @@ export interface User {
  * Factory function — the ONLY correct way to create a User object.
  * This enforces the rules that must always be true for a User to exist.
  * If any rule is broken, it throws an error before the bad data ever reaches the database.
+ *
+ * The plain-text password is hashed here rather than in the controller, so there
+ * is no code path that can build a User carrying a readable password.
  */
 export function createUser(id: string, username: string, password: string, role: Role = "user"): User {
   // A user without a username makes no sense — reject it immediately
   if (!username || !username.trim()) throw new Error("Username is required")
 
-  // Minimum password length — short passwords are too easy to guess
+  // Minimum password length — short passwords are too easy to guess.
+  // Checked before hashing, so the rule applies to what the user actually typed.
   if (!password || password.length < 6) throw new Error("Password must be at least 6 characters")
 
   // Every new user starts as active — only an admin can change this later
-  return { id, username: username.trim(), password, role, status: "active" }
+  return { id, username: username.trim(), password: hashPassword(password), role, status: "active" }
 }
 
 /**

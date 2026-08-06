@@ -10,14 +10,14 @@ PostStar lets users register, create posts, leave comments, and like content —
 
 ## ✨ Features
 
-- 🔐 **Authentication** — Register and login with JWT-based token auth
+- 🔐 **Authentication** — Register and login with JWT-based token auth, expiring tokens, and scrypt-hashed passwords
 - 📝 **Posts** — Create, read, update, and delete forum posts
 - 💬 **Comments** — Threaded comments on each post
 - ❤️ **Likes** — Like posts (once per user)
 - 🛡️ **Admin Panel** — Stats overview, user management, and content moderation
 - 🌐 **Simple UI** — Browser-accessible frontend served at `/`
 - 🏛️ **Clean Architecture** — Domain, ports, and infrastructure layers clearly separated
-- ✅ **Test Coverage** — 60%+ coverage with Jest
+- ✅ **Test Coverage** — 70%+ coverage with Jest
 
 ---
 
@@ -57,11 +57,17 @@ Copy `.env.example` and fill in your own values:
 cp .env.example .env
 ```
 
-| Variable      | Description                       | Default |
-| ------------- | --------------------------------- | ------- |
-| `PORT`        | Server port                       | `3000`  |
-| `MONGODB_URI` | MongoDB connection string         | —       |
-| `JWT_SECRET`  | Secret key for signing JWT tokens | —       |
+| Variable                  | Description                                          | Default |
+| ------------------------- | ---------------------------------------------------- | ------- |
+| `PORT`                    | Server port                                          | `3000`  |
+| `MONGODB_URI`             | MongoDB connection string                            | —       |
+| `JWT_SECRET`              | Secret key for signing JWT tokens                    | —       |
+| `JWT_EXPIRES_IN_SECONDS`  | How long a login token stays valid                   | `86400` |
+| `ADMIN_USERNAME`          | Username for the account created by `npm run seed`   | `admin` |
+| `ADMIN_PASSWORD`          | Password for the account created by `npm run seed`   | `admin123` |
+
+> ⚠️ `JWT_SECRET` is **required** when `NODE_ENV=production` — the server refuses
+> to start without it rather than fall back to a development secret.
 
 ### Running
 
@@ -78,11 +84,15 @@ Open **http://localhost:3000** in your browser to access the UI.
 
 ### Seed Data
 
-Populate the database with sample users, posts, and comments:
+Create the first admin account (needed to reach the admin-only routes, since
+`/auth/register` always creates regular users):
 
 ```bash
 npm run seed
 ```
+
+Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your `.env` first — the defaults are
+for local development only. The seeded password is hashed just like any other.
 
 ### Tests
 

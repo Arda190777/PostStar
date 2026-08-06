@@ -4,7 +4,7 @@
 // be faked. This file uses a custom HMAC-SHA256 implementation instead of
 // an external library.
 
-import { createHmac } from "crypto"
+import { createHmac, timingSafeEqual } from "crypto"
 import { config } from "../config/config.js"
 
 // Data stored inside the JWT payload
@@ -12,6 +12,18 @@ export interface JwtPayload {
   id: string
   username: string
   role: string
+}
+
+/**
+ * What actually travels inside the token: the payload plus two standard
+ * JWT timestamps, both in seconds since 1970 (not milliseconds).
+ *
+ * iat — "issued at", when the token was created
+ * exp — "expires", the moment the token stops being accepted
+ */
+interface SignedPayload extends JwtPayload {
+  iat: number
+  exp: number
 }
 
 // Base64URL encode (replaces + → - and / → _ and removes =)
@@ -26,15 +38,29 @@ const fromBase64Url = (str: string): string =>
 const sign = (data: string): string =>
   createHmac("sha256", config.jwtSecret).update(data).digest("base64url")
 
+/** Current time in seconds — the unit JWT timestamps use */
+const nowInSeconds = (): number => Math.floor(Date.now() / 1000)
+
 /** Creates a signed JWT token from the given payload */
 export const createToken = (payload: JwtPayload): string => {
+  const issuedAt = nowInSeconds()
+
+  // Stamp an expiry into the token itself. Because it sits inside the signed
+  // section, changing it invalidates the signature — a client cannot extend
+  // its own token's lifetime.
+  const claims: SignedPayload = {
+    ...payload,
+    iat: issuedAt,
+    exp: issuedAt + config.jwtExpiresInSeconds
+  }
+
   const header = toBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }))
-  const body = toBase64Url(JSON.stringify(payload))
+  const body = toBase64Url(JSON.stringify(claims))
   const signature = sign(`${header}.${body}`)
   return `${header}.${body}.${signature}`
 }
 
-/** Verifies a JWT token; returns the payload if valid, null otherwise */
+/** Verifies a JWT token; returns the payload if valid, null if invalid or expired */
 export const verifyToken = (token: string): JwtPayload | null => {
   const parts = token.split(".")
   if (parts.length !== 3) return null
@@ -42,12 +68,38 @@ export const verifyToken = (token: string): JwtPayload | null => {
   const [header, body, signature] = parts as [string, string, string]
   const expected = sign(`${header}.${body}`)
 
-  // Signature mismatch → invalid token
-  if (signature !== expected) return null
+  // Signature mismatch → the token was tampered with or signed with another key
+  if (!safeEqual(signature, expected)) return null
 
+  let claims: SignedPayload
   try {
-    return JSON.parse(fromBase64Url(body)) as JwtPayload
+    claims = JSON.parse(fromBase64Url(body)) as SignedPayload
   } catch {
     return null
   }
+
+  // Reject anything past its expiry. A token with no exp at all was issued by
+  // an older version of this code, and is treated as invalid rather than
+  // trusted forever — those clients simply log in again.
+  if (typeof claims.exp !== "number" || claims.exp <= nowInSeconds()) return null
+
+  return { id: claims.id, username: claims.username, role: claims.role }
+}
+
+/**
+ * Constant-time string comparison.
+ *
+ * A plain `!==` stops as soon as it finds a difference, so a wrong signature
+ * that shares its first few characters is rejected marginally slower. An
+ * attacker can measure those timing differences to reconstruct a valid
+ * signature one character at a time. timingSafeEqual always takes the same
+ * time regardless of where the difference is.
+ */
+const safeEqual = (a: string, b: string): boolean => {
+  const bufferA = Buffer.from(a)
+  const bufferB = Buffer.from(b)
+
+  // timingSafeEqual throws unless both sides are the same length. Length alone
+  // does not reveal anything useful here — every valid signature is the same size.
+  return bufferA.length === bufferB.length && timingSafeEqual(bufferA, bufferB)
 }
